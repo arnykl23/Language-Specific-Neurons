@@ -1,0 +1,19 @@
+# Tested on Python 3.12, NVIDIA RTX 5080 (Blackwell, sm_120), CUDA 13.
+#
+# PyTorch must match your CUDA/GPU. The plain `torch>=2.7` line below will
+# pull a default build that may NOT have kernels for newer GPUs (Blackwell needs
+# torch >= 2.7 with a recent CUDA). For a matching build, install torch first
+# from the PyTorch index, then the rest, e.g. for CUDA 13:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu130
+#   pip install -r requirements.txt
+#
+# Feature notes:
+# - generation_hf.py stop-string support needs transformers >= 4.40 (tested 5.x)
+# - --load_in_4bit needs bitsandbytes (>=0.45 for Blackwell) + accelerate
+
+torch>=2.7             # tested: 2.12.1+cu130
+transformers>=4.40     # tested: 5.12.1
+datasets>=2.0          # tested: 5.0.0
+numpy                  # tested: 2.5.0
+accelerate>=0.26       # tested: 1.14.0  (device_map / 4-bit loading)
+bitsandbytes>=0.45     # tested: 0.49.2  (optional: only for --load_in_4bit)
