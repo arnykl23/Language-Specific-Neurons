@@ -1,32 +1,23 @@
-# Language-Specific-Neurons
-This repository is the official implementation of our paper [Language-Specific Neurons: The Key to Multilingual Capabilities in Large Language Models
-](https://arxiv.org/abs/2402.16438) in ACL 2024.
+# Language-Specific-Neurons (HuggingFace transformers)
 
-## Language Neurons Found by LAPE
-We provide our found language-specific neurons in LLaMA-2 (7B), LLaMA-2 (13B), LLaMA-2 (70B), BLOOM (7B), OPT (6.7B), Mistral (7B), and Phi-2 (2.7B).
+The original scripts above are pinned to `vllm==0.2.7`, which does not run on newer GPUs (e.g. NVIDIA Blackwell / RTX 50-series). This fork adds vLLM-free reimplementations built on plain HuggingFace `transformers` that produce the same outputs, so the full pipeline runs on current PyTorch/CUDA.
 
-You should use `torch.load` to load `xxx.neuron.pth`, each of which is a `List[List[LongTensor]]`, `neuron[i][j]` represents the neuron indice of the i-th language in the j-th layer in the model. The language 0-6 indice stand for en, zh, fr, es, vi, id, ja. For example, `LLaMA-2-7B[1][4]=tensor([6147, 9114, 9292])`, which means that the Chinese neurons inside the 4-th layer of LLaMA-2-7B are of the indice 6147, 9114, and 9292.
+- `tokenizer.py` — tokenize `wikimedia/wikipedia` into the `data/id.{lang}.{split}.{tag}` token-id tensors the scripts consume.
+- `activation_hf.py` — drop-in replacement for `activation.py` (records per-neuron activation counts via forward hooks).
+- `ppl_hf.py` — drop-in replacement for `ppl.py` (perplexity under neuron deactivation).
+- `generation_hf.py` — drop-in replacement for `generation.py` (batched open-ended generation under neuron deactivation).
 
-## Identifying Language-specific Neurons
-
-Please use `vllm==0.2.7` to run our code.
-
-Record the activation state:
 ```bash
-CUDA_VISIVLE_DEVICES=0 python activation.py -m meta-llama/Llama-2-7b-hf -l xx
-```
-Identifying language-specific neurons:
-```bash
+# 1. Tokenize wikipedia (per language/dataset split)
+python tokenizer.py -m meta-llama/Llama-2-7b-hf -l en -s train
+
+# 2. Record activations, then identify neurons
+CUDA_VISIBLE_DEVICES=0 python activation_hf.py -m meta-llama/Llama-2-7b-hf -l en
 python identify.py
+
+# 3. PPL and generation when deactivating neurons
+CUDA_VISIBLE_DEVICES=0 python ppl_hf.py        -m meta-llama/Llama-2-7b-hf -a LLaMA-2-7B.neuron.pth
+CUDA_VISIBLE_DEVICES=0 python generation_hf.py -m meta-llama/Llama-2-7b-hf -a LLaMA-2-7B.neuron.pth
 ```
 
-## Computing PPL when Deactivating Neurons
-You should first download the wikipedia texts from https://huggingface.co/datasets/wikimedia/wikipedia. Then tokenize them, concateneate them into a long list, and save them as a `LongTensor` in `data/id.{lang}.train.llama`. Finally, run the following code:
-```bash
-CUDA_VISIVLE_DEVICES=0 python ppl.py -m meta-llama/Llama-2-7b-hf -a activation_mask/xxx
-```
-
-## Open-ended Generation when Deactivating Neurons
-```bash
-CUDA_VISIVLE_DEVICES=0 python generation.py -m meta-llama/Llama-2-7b-hf -a activation_mask/xxx
-```
+Requires a recent `transformers` (>= 4.40 for `generation_hf.py`'s stop-string support) and a PyTorch build that matches your GPU/CUDA.

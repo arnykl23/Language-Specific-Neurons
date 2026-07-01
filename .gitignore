@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Tokenized wikipedia token-id tensors (large, regenerate with tokenizer.py)
+data/id.*.train.*
+data/id.*.valid.*
+
+# Activation statistics written by activation.py / activation_hf.py
+data/activation.*
+
+# Generated outputs
+results/
+activation_mask/
